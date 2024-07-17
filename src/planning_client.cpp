@@ -140,16 +140,16 @@ int main(int argc, char** argv)
   tesseract_common::AnyPoly any_composite_instruction(program);
   
   //serialize
-  std::string program_string = tesseract_common::Serialization::toArchiveStringXML(program, "program"); 
+  std::string any_composite_instruction_string = tesseract_common::Serialization::toArchiveStringXML(any_composite_instruction, "any_composite_instruction"); 
 
   // Afficher la chaîne sérialisée
-  std::cout << program_string << std::endl;
+  std::cout << any_composite_instruction_string << std::endl;
     
   // result->response.results = Serialization::toArchiveStringXML<tesseract_planning::InstructionPoly>(
   //   results.as<tesseract_planning::CompositeInstruction>());
 
 
-  goal_msg.request.input= program_string;
+  goal_msg.request.input= any_composite_instruction_string;
 
   // Remplir le goal_msg ici avec les informations nécessaires
 
