@@ -1,11 +1,14 @@
 cmake_minimum_required(VERSION 3.8)
-project(planning_client_pkg)
 
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
-endif()
+find_package(ros_industrial_cmake_boilerplate REQUIRED)
+extract_package_metadata(pkg)
+project(${pkg_extracted_name})
 
-set(CMAKE_FIND_DEBUG_MODE 1)
+# if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+#   add_compile_options(-Wall -Wextra -Wpedantic)
+# endif()
+
+# set(CMAKE_FIND_DEBUG_MODE 1)
 
 # ROS
 find_package(ament_cmake REQUIRED)
@@ -23,12 +26,14 @@ find_package(tesseract_monitoring REQUIRED)
 find_package(tesseract_msgs REQUIRED)
 find_package(tesseract_rosutils REQUIRED)
 
+
+find_package(planning_server REQUIRED)
 # Load variable for clang tidy args, compiler options and cxx version
 tesseract_variables()
 
-message(STATUS "TESSERACT_COMPILE_OPTIONS: ${TESSERACT_COMPILE_OPTIONS}")
-message(STATUS "TESSERACT_CLANG_TIDY_ARGS: ${TESSERACT_CLANG_TIDY_ARGS}")
-message(STATUS "TESSERACT_CXX_VERSION: ${TESSERACT_CXX_VERSION}")
+# message(STATUS "TESSERACT_COMPILE_OPTIONS: ${TESSERACT_COMPILE_OPTIONS}")
+# message(STATUS "TESSERACT_CLANG_TIDY_ARGS: ${TESSERACT_CLANG_TIDY_ARGS}")
+# message(STATUS "TESSERACT_CXX_VERSION: ${TESSERACT_CXX_VERSION}")
 
 message("TARTEDVUEZDTVKQYZDVHUCDVQGDVKGQDKQDV")
 message(${PROJECT_NAME})
@@ -43,12 +48,37 @@ message(${PROJECT_NAME})
 
 
 add_executable(${PROJECT_NAME}_node src/planning_client.cpp)
-target_link_libraries(${PROJECT_NAME}_node PRIVATE ${PROJECT_NAME} ${catkin_LIBRARIES} ${tesseract_common_LIBRARIES})
-target_include_directories(${PROJECT_NAME}_node PUBLIC
-"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-"$<INSTALL_INTERFACE:include>")
 
+target_link_libraries(${PROJECT_NAME}_node
+  PUBLIC
+    rclcpp::rclcpp
+    tf2_ros::tf2_ros
 
+    tesseract::tesseract_command_language
+    tesseract::tesseract_common
+    tesseract::tesseract_motion_planners_core
+    tesseract::tesseract_motion_planners_simple
+    tesseract::tesseract_motion_planners_trajopt
+    tesseract::tesseract_motion_planners_trajopt_ifopt
+    tesseract::tesseract_motion_planners_ompl
+    tesseract::tesseract_motion_planners_descartes
+    tesseract::tesseract_task_composer
+    tesseract::tesseract_task_composer_planning
+    tesseract::tesseract_task_composer_planning_nodes
+    ${catkin_LIBRARIES}
+    ${tesseract_msgs_TARGETS}
+    ${planning_server_TARGETS}
+    tesseract_monitoring::tesseract_monitoring_environment
+    tesseract_rosutils::tesseract_rosutils
+  PRIVATE
+    ${tf2_eigen_TARGETS}
+)
+
+install(TARGETS ${PROJECT_NAME}_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+ament_package()
 
 
 
@@ -93,7 +123,6 @@ target_include_directories(${PROJECT_NAME}_node PUBLIC
 #   ament_lint_auto_find_test_dependencies()
 # endif()
 
-ament_package()
 
 
 
