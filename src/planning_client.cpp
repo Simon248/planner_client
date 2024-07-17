@@ -130,20 +130,24 @@ int main(int argc, char** argv)
   return 1;
 }
   auto goal_msg = tesseract_msgs::action::GetMotionPlan::Goal();
-  goal_msg.request.name = "FreespaceTask";
+  goal_msg.request.name = "OMPLTask";
   tesseract_planning::CompositeInstruction  program;
   
   create_programe(program);
 
 
   // to anypoly
-  tesseract_common::AnyPoly any_composite_instruction(program);
+  // tesseract_common::AnyPoly any_composite_instruction(program);
+  tesseract_planning::InstructionPoly any_composite_instruction(program);
   
   //serialize
-  std::string any_composite_instruction_string = tesseract_common::Serialization::toArchiveStringXML(any_composite_instruction, "any_composite_instruction"); 
+  std::string any_composite_instruction_string = tesseract_common::Serialization::toArchiveStringXML(any_composite_instruction); 
 
+  bool test= tesseract_common::Serialization::toArchiveFileXML(any_composite_instruction,
+                               "test_tesseract_serialisation.xml",
+                               "any_composite_instruction");
   // Afficher la chaîne sérialisée
-  std::cout << any_composite_instruction_string << std::endl;
+  // std::cout << any_composite_instruction_string << std::endl;
     
   // result->response.results = Serialization::toArchiveStringXML<tesseract_planning::InstructionPoly>(
   //   results.as<tesseract_planning::CompositeInstruction>());
