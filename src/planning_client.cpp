@@ -12,9 +12,14 @@ TESSERACT_COMMON_IGNORE_WARNINGS_POP
 #include <tesseract_command_language/move_instruction.h>
 #include <tesseract_command_language/composite_instruction.h>
 #include <tesseract_command_language/cartesian_waypoint.h>
+// #include <tesseract_command_language/serialization.h>
 #include <tesseract_common/serialization.h>
 
-#include <tesseract_common/any_poly.h>
+#include <tesseract_task_composer/core/test_suite/test_programs.hpp>
+
+// #include <tesseract_common/any_poly.h>
+// #include <tesseract_command_language/serialization.h>
+
 
 using namespace tesseract_environment;
 using namespace tesseract_planning;
@@ -134,18 +139,24 @@ int main(int argc, char** argv)
   tesseract_planning::CompositeInstruction  program;
   
   create_programe(program);
-
+ std::cout << "Type de program: " << typeid(program).name() << std::endl;
 
   // to anypoly
-  // tesseract_common::AnyPoly any_composite_instruction(program);
-  tesseract_planning::InstructionPoly any_composite_instruction(program);
-  
-  //serialize
-  std::string any_composite_instruction_string = tesseract_common::Serialization::toArchiveStringXML(any_composite_instruction); 
+  tesseract_common::AnyPoly any_composite_instruction(program);
 
-  bool test= tesseract_common::Serialization::toArchiveFileXML(any_composite_instruction,
-                               "test_tesseract_serialisation.xml",
-                               "any_composite_instruction");
+  CompositeInstruction program2 = test_suite::rasterExampleProgram();
+  // tesseract_planning::InstructionPoly any_composite_instruction(program);
+  std::cout << "Type de any_composite_instruction: " << typeid(any_composite_instruction).name() << std::endl;
+  //serialize
+  std::string any_composite_instruction_string = 
+  tesseract_common::Serialization::toArchiveStringXML<tesseract_common::AnyPoly>(program2); 
+
+  //   result->response.results = Serialization::toArchiveStringXML<tesseract_planning::InstructionPoly>(
+  //       results.as<tesseract_planning::CompositeInstruction>());
+
+  // bool test= tesseract_planning::Serialization::toArchiveStringXML(any_composite_instruction,
+  //                              "test_tesseract_serialisation.xml",
+  //                              "any_composite_instruction");
   // Afficher la chaîne sérialisée
   // std::cout << any_composite_instruction_string << std::endl;
     
