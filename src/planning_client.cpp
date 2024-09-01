@@ -3,6 +3,7 @@ TESSERACT_COMMON_IGNORE_WARNINGS_PUSH
 #include <rclcpp/rclcpp.hpp>
 // #include <tesseract_msgs/GetMotionPlanAction.h>
 #include <tesseract_msgs/action/get_motion_plan.hpp>
+
 TESSERACT_COMMON_IGNORE_WARNINGS_POP
 
 #include <tesseract_environment/environment.h>
@@ -23,42 +24,48 @@ TESSERACT_COMMON_IGNORE_WARNINGS_POP
 
 
 #include <tesseract_common/manipulator_info.h>
+#include "trajectory_msgs/msg/joint_trajectory.hpp"
+
+#include <tesseract_rosutils/utils.h>
+
+
+// #include <iostream>
+// #include <typeinfo>
+#include <moveit_msgs/msg/display_trajectory.hpp>
+#include <moveit_msgs/msg/robot_trajectory.hpp>
+
 using tesseract_common::Serialization;
 using namespace tesseract_environment;
 using namespace tesseract_planning;
 
-
-
-CompositeInstruction rasterExampleProgram(const std::string& freespace_profile = DEFAULT_PROFILE_KEY,
+CompositeInstruction create_programe(const std::string& freespace_profile = DEFAULT_PROFILE_KEY,
                                                  const std::string& process_profile = "PROCESS")
 {
   RCLCPP_INFO(rclcpp::get_logger("rclcpp"), DEFAULT_PROFILE_KEY.c_str()); //-->'DEFAULT'
-
-  //ORIENTATION
-
-    // double w = 2.67935e-08, x = 0.999949, y = -2.7098e-10, z = 0.0101133;
-    // Eigen::Quaterniond rotation(w, x, y, z);
-
-    Eigen::Vector3d axis(-0.79, 0.0, -0.61);
+    //defining oruientation fomr angle axis taken from SWORD
+    Eigen::Vector3d axis(1.00, 0.0, 0.04);
     axis.normalize();
     double angle = 180.0 * M_PI / 180.0;
     Eigen::AngleAxisd angleAxis(angle, axis);
     Eigen::Quaterniond rotation(angleAxis);
-
-    // Afficher le quaternion
     std::cout << "Quaternion: " << rotation.coeffs().transpose() << std::endl;
 
-  double Z=1.0;
+
+  double X=0.510;
+  double Y=0.00264;
+  double Z=0.68411;
+
   CompositeInstruction program(
       DEFAULT_PROFILE_KEY, CompositeInstructionOrder::ORDERED, tesseract_common::ManipulatorInfo("groupe", "world", "tcp_screw_gripper"));
 
   // Start Joint Position for the program
   std::vector<std::string> joint_names = { "joint_1_s", "joint_2_l", "joint_3_u", "joint_4_r", "joint_5_b", "joint_6_t" };
+
   StateWaypointPoly swp1{ StateWaypoint(joint_names, Eigen::VectorXd::Zero(6)) };
   MoveInstruction start_instruction(swp1, MoveInstructionType::FREESPACE, freespace_profile);
   start_instruction.setDescription("Start");
 
-  CartesianWaypointPoly wp1{ CartesianWaypoint(Eigen::Isometry3d::Identity() * Eigen::Translation3d(0.4, 0.0, Z) *
+  CartesianWaypointPoly wp1{ CartesianWaypoint(Eigen::Isometry3d::Identity() * Eigen::Translation3d(X, Y, Z) *
                                                rotation) };
 
   // Define from start composite instruction
@@ -74,18 +81,20 @@ CompositeInstruction rasterExampleProgram(const std::string& freespace_profile =
   // for (int i = 0; i < 4; ++i)
   // {
     // double x = 0.55 + (i * 0.001);
-    double X=0.89;
-    double Y=-0.01;
+
     
     // CartesianWaypointPoly wp1 = CartesianWaypoint(Eigen::Isometry3d::Identity() * Eigen::Translation3d(x, y, Z) *
                                                   // rotation);
     CartesianWaypointPoly wp2 = CartesianWaypoint(Eigen::Isometry3d::Identity() * Eigen::Translation3d(X, Y, Z) *
                                                   rotation);
-    X+= 0.001; 
+    X+= 0.01; 
     CartesianWaypointPoly wp3 = CartesianWaypoint(Eigen::Isometry3d::Identity() * Eigen::Translation3d(X, Y, Z) *
                                                   rotation);
-    X+= 0.001; 
+    X+= 0.01; 
     CartesianWaypointPoly wp4 = CartesianWaypoint(Eigen::Isometry3d::Identity() * Eigen::Translation3d(X, Y, Z) *
+                                                  rotation);
+    X+= 0.01; 
+    CartesianWaypointPoly wp5 = CartesianWaypoint(Eigen::Isometry3d::Identity() * Eigen::Translation3d(X, Y, Z) *
                                                   rotation);
     // x+= 0.001; 
     // CartesianWaypointPoly wp5 = CartesianWaypoint(Eigen::Isometry3d::Identity() * Eigen::Translation3d(X, Y, Z) *
@@ -105,7 +114,7 @@ CompositeInstruction rasterExampleProgram(const std::string& freespace_profile =
       raster_segment.appendMoveInstruction(MoveInstruction(wp2, MoveInstructionType::LINEAR, process_profile));
       raster_segment.appendMoveInstruction(MoveInstruction(wp3, MoveInstructionType::LINEAR, process_profile));
       raster_segment.appendMoveInstruction(MoveInstruction(wp4, MoveInstructionType::LINEAR, process_profile));
-      // raster_segment.appendMoveInstruction(MoveInstruction(wp5, MoveInstructionType::LINEAR, process_profile));
+      raster_segment.appendMoveInstruction(MoveInstruction(wp5, MoveInstructionType::LINEAR, process_profile));
       // raster_segment.appendMoveInstruction(MoveInstruction(wp6, MoveInstructionType::LINEAR, process_profile));
       // raster_segment.appendMoveInstruction(MoveInstruction(wp7, MoveInstructionType::LINEAR, process_profile));
     // }
@@ -119,7 +128,7 @@ CompositeInstruction rasterExampleProgram(const std::string& freespace_profile =
     //   raster_segment.appendMoveInstruction(MoveInstruction(wp1, MoveInstructionType::LINEAR, process_profile));
     // }
     program.push_back(raster_segment);
-
+    // program.push_back(raster_segment);
     // Add transition
     // if (i == 0 || i == 2)
     // {
@@ -165,225 +174,200 @@ CompositeInstruction rasterExampleProgram(const std::string& freespace_profile =
 
 
 
-
-void goal_response_callback(std::shared_ptr<rclcpp_action::ClientGoalHandle<tesseract_msgs::action::GetMotionPlan>> goal_handle)
+class ActionClient : public rclcpp::Node
 {
-  if (!goal_handle) {
-    RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Goal was rejected by server");
-  } else {
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Goal accepted by server, waiting for result");
-  }
-}
+public:
 
-void feedback_callback(
-  std::shared_ptr<rclcpp_action::ClientGoalHandle<tesseract_msgs::action::GetMotionPlan>>,
-  const std::shared_ptr<const tesseract_msgs::action::GetMotionPlan::Feedback> feedback)
-{
-  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Received feedback");
-}
+  // USING
+  using ActionT = tesseract_msgs::action::GetMotionPlan;
+  using GoalHandleAction = rclcpp_action::ClientGoalHandle<ActionT>;
 
-void result_callback(const rclcpp_action::ClientGoalHandle<tesseract_msgs::action::GetMotionPlan>::WrappedResult & result)
-{
-  switch (result.code) {
-    case rclcpp_action::ResultCode::SUCCEEDED:{
-      RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Result received");
-      // RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Results: %s", result.result->response.results.c_str());
-
-      // auto ci = future->context->data_storage->getData(output_key).as<CompositeInstruction>();
-      // tesseract_common::Toolpath toolpath = toToolpath(ci, *env_);
-      tesseract_planning::InstructionPoly ci = Serialization::fromArchiveStringXML<tesseract_planning::InstructionPoly>(result.result->response.results);
-      
-      // result->response.results = Serialization::toArchiveStringXML<tesseract_planning::InstructionPoly>(
-      //   results.as<tesseract_planning::CompositeInstruction>());
-      
-      // ci = Serialization::toArchiveStringXML<tesseract_planning::InstructionPoly>(
-      //   results.as<tesseract_planning::CompositeInstruction>());
-      std::cout <<"222222222222222222222222222222222222222"<<std::endl;
-      tesseract_common::JointTrajectory trajectory = toJointTrajectory(ci);
-      RCLCPP_INFO(rclcpp::get_logger("rclcpp"), trajectory.description.c_str());
-
-      trajectory_msgs::msg::JointTrajectory msg;
+  explicit ActionClient(const rclcpp::NodeOptions & options = rclcpp::NodeOptions())
+  : Node("action_client", options)
+  {
+  //CREATE TRAJ PUBLISHER
+  this->trajectory_publisher_ = this->create_publisher<trajectory_msgs::msg::JointTrajectory>("joint_trajectory_topic", 10);
   
-      // Set the joint names
-      msg.joint_names = joint_trajectory.joint_names;
+  // CREATE DISPLAY_TRAJECTORY_PUBLISHER
+  this->display_trajectory_publisher_ = this->create_publisher<moveit_msgs::msg::DisplayTrajectory>("display_planned_path", 10);
 
-      // Set the points
-      for (const auto& point : joint_trajectory.trajectory)
+  // CREATE ACTION CLIENT
+  this->client_ptr_ = rclcpp_action::create_client<ActionT>(this,"tesseract_get_motion_plan");
+
+  // WAIT FOR SERVER
+  if (!this->client_ptr_->wait_for_action_server(std::chrono::seconds(10))) 
+    {
+      RCLCPP_ERROR(this->get_logger(), "Action server not available after waiting");
+      rclcpp::shutdown();
+      throw std::runtime_error("Action server not available");
+    }
+  // SEND REQUEST
+    this->send_goal();
+  }
+
+
+
+  void send_goal()
+  {
+    // Create Goal
+    auto goal_msg = ActionT::Goal();
+    // Taskflow to use
+    goal_msg.request.name = "RasterFtPipeline";
+    // goal_msg.request.executor = "tututu";
+    goal_msg.request.dotgraph= true;
+    goal_msg.request.debug=true;
+    goal_msg.request.save_io=true;
+    // programme definition
+    CompositeInstruction program = create_programe();
+    //programme serialisation
+    std::string any_composite_instruction_string = tesseract_common::Serialization::toArchiveStringXML<tesseract_common::AnyPoly>(program); 
+    
+    goal_msg.request.input = any_composite_instruction_string;
+    
+
+
+    RCLCPP_INFO(this->get_logger(), "Sending goal");
+    auto send_goal_options = rclcpp_action::Client<ActionT>::SendGoalOptions();
+    send_goal_options.goal_response_callback =
+      std::bind(&ActionClient::goal_response_callback, this, std::placeholders::_1);
+    send_goal_options.feedback_callback =
+      std::bind(&ActionClient::feedback_callback, this, std::placeholders::_1, std::placeholders::_2);
+    send_goal_options.result_callback =
+      std::bind(&ActionClient::result_callback, this, std::placeholders::_1);
+    
+    
+    this->client_ptr_->async_send_goal(goal_msg, send_goal_options);
+  }
+
+private:
+  rclcpp_action::Client<ActionT>::SharedPtr client_ptr_;
+  rclcpp::Publisher<trajectory_msgs::msg::JointTrajectory>::SharedPtr trajectory_publisher_;
+  rclcpp::Publisher<moveit_msgs::msg::DisplayTrajectory>::SharedPtr display_trajectory_publisher_;
+
+  void publish_display_trajectory(trajectory_msgs::msg::JointTrajectory traj_msg)
+  {
+    // Create RobotTrajectory message
+    moveit_msgs::msg::RobotTrajectory robot_trajectory;
+    robot_trajectory.joint_trajectory = traj_msg;
+
+    // Create display_traj message
+    moveit_msgs::msg::DisplayTrajectory display_traj_msg;
+    display_traj_msg.trajectory.push_back(robot_trajectory);
+
+
+    RCLCPP_INFO(this->get_logger(), "Publishing DisplayTrajectory");
+
+    this->display_trajectory_publisher_->publish(display_traj_msg);
+  };
+
+  void publish_trajectory(trajectory_msgs::msg::JointTrajectory msg)
+  {
+    RCLCPP_INFO(this->get_logger(), "Publishing JointTrajectory");
+    this->trajectory_publisher_->publish(msg);
+  };
+
+  void goal_response_callback(std::shared_ptr<GoalHandleAction> goal_handle)
+  {
+    if (!goal_handle) {
+      RCLCPP_ERROR(this->get_logger(), "Goal was rejected by server");
+    } else {
+      RCLCPP_INFO(this->get_logger(), "Goal accepted by server, waiting for result");
+    }
+  }
+
+  void feedback_callback(
+    std::shared_ptr<GoalHandleAction>,
+    const std::shared_ptr<const ActionT::Feedback> feedback)
+  {
+    RCLCPP_INFO(this->get_logger(), "Received feedback");
+  }
+
+  void result_callback(const GoalHandleAction::WrappedResult & result)
+  {
+    switch (result.code) {
+      case rclcpp_action::ResultCode::SUCCEEDED:
       {
-      trajectory_msgs::msg::JointTrajectoryPoint traj_point;
-      traj_point.positions = point.positions;
-      traj_point.velocities = point.velocities;
-      traj_point.accelerations = point.accelerations;
-      traj_point.time_from_start = rclcpp::Duration(point.time_from_start);
-      msg.points.push_back(traj_point);
+        std::cout<<result.result->response.dotgraph<<std::endl;
+        RCLCPP_INFO(this->get_logger(), "Goal succeeded");
+        
+        //deserialise CI result
+        tesseract_planning::InstructionPoly ci = Serialization::fromArchiveStringXML<tesseract_planning::InstructionPoly>(result.result->response.results);
+        
+        //generate intial state
+
+        tesseract_scene_graph::SceneState scene_state;
+
+        for (const auto& pair : result.result->response.initial_state)
+        {
+          scene_state.joints[pair.first] = pair.second;
+        }
+
+        //CI to tesseract_traj
+        tesseract_common::JointTrajectory tesseract_joint_trajectory = toJointTrajectory(ci);
+        //est ce que les time stamp sont OK dans la traj tesseract?
+          for (const auto& states : tesseract_joint_trajectory)
+            {
+              // std::cout<<states.time_from_start<<std::endl;
+              std::cout<<states.time<<std::endl;
+              std::cout<<'22222222222222222'<<std::endl;
+              std::cout<<'AAAAAAAAAAAAAAAAA'<<std::endl;
+              std::cout<<'22222222222222222'<<std::endl;
+            }
+              // current_point.time_from_start = rclcpp::Duration::from_seconds(states.time);
+        //Ci & initial state to ros msg
+        trajectory_msgs::msg::JointTrajectory ros_msg = tesseract_rosutils::toMsg(tesseract_joint_trajectory,scene_state);
+
+        // // tesseract_scene_graph::SceneState scene_state;
+
+        // // initial_state_data=result.result->response.initial_state
+        // std::cout<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<std::endl;
+        // std::cout<<typeid(result.result->response.initial_state).name()<<std::endl; //St6vectorIN14tesseract_msgs3msg17StringDoublePair_ISaIvEEESaIS4_EE
+
+
+        // // for (const auto& pair : initial_state_data)
+        // //   {
+        // //     scene_state.joints[pair.first] = pair.second;
+        // //   }
+        // // tesseract_common::JointTrajectory trajectory = toJointTrajectory(ci);
+        publish_trajectory(ros_msg);
+        publish_display_trajectory(ros_msg);
+        break;
       }
+      case rclcpp_action::ResultCode::ABORTED:
+        RCLCPP_ERROR(this->get_logger(), "Goal was aborted");
+        return;
+      case rclcpp_action::ResultCode::CANCELED:
+        RCLCPP_ERROR(this->get_logger(), "Goal was canceled");
+        return;
+      default:
+        RCLCPP_ERROR(this->get_logger(), "Unknown result code");
+        return;
     }
 
-      RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Goal was aborted");
-      break;
-    case rclcpp_action::ResultCode::CANCELED:
-      RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Goal was canceled");
-      break;
-    default:
-      RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Unknown result code");
-      break;
+    // Process the result
+    RCLCPP_INFO(this->get_logger(), "Result received");
   }
-  rclcpp::shutdown();
-}
+};
 
-
-void create_programe(tesseract_planning::CompositeInstruction & program)
-{
-using namespace tesseract_planning;
-
-// Créer et initialiser le programme
-    program = CompositeInstruction(
-        "cartesian_program",
-        CompositeInstructionOrder::ORDERED,
-        tesseract_common::ManipulatorInfo("groupe", "world", "tool0")
-    );
-
-  std::vector<std::string> joint_names;
-  joint_names.emplace_back("joint_1_s");
-  joint_names.emplace_back("joint_2_l");
-  joint_names.emplace_back("joint_3_u");
-  joint_names.emplace_back("joint_4_r");
-  joint_names.emplace_back("joint_5_b");
-  joint_names.emplace_back("joint_6_t");
-
-  Eigen::VectorXd joint_pos(6);
-  joint_pos(0) = 0.0;
-  joint_pos(1) = 0.0;
-  joint_pos(2) = 0.0;
-  joint_pos(3) = 0.0;
-  joint_pos(4) = 0.0;
-  joint_pos(5) = 0.0;
-
-
-StateWaypointPoly wp0{ StateWaypoint(joint_names, joint_pos) };
-MoveInstruction start_instruction(wp0, MoveInstructionType::FREESPACE, "freespace_profile");
-start_instruction.setDescription("Start Instruction");
-
-// Create cartesian waypoint
-CartesianWaypointPoly wp1{ CartesianWaypoint(Eigen::Isometry3d::Identity() * Eigen::Translation3d(0.5, -0.2, 0.62) *
-                                              Eigen::Quaterniond(0, 0, 1.0, 0)) };
-
-CartesianWaypointPoly wp2{ CartesianWaypoint(Eigen::Isometry3d::Identity() * Eigen::Translation3d(0.5, 0.3, 0.62) *
-                                              Eigen::Quaterniond(0, 0, 1.0, 0)) };
-// Plan freespace from start
-MoveInstruction plan_f0(wp1, MoveInstructionType::FREESPACE, "freespace_profile");
-plan_f0.setDescription("from_start_plan");
-
-// Plan linear move
-MoveInstruction plan_c0(wp2, MoveInstructionType::LINEAR, "RASTER");
-
-// Plan freespace to end
-MoveInstruction plan_f1(wp0, MoveInstructionType::FREESPACE, "freespace_profile");
-plan_f1.setDescription("to_end_plan");
-
-// Add Instructions to program
-program.appendMoveInstruction(start_instruction);
-program.appendMoveInstruction(plan_f0);
-program.appendMoveInstruction(plan_c0);
-program.appendMoveInstruction(plan_f1);
-
-// Print Diagnostics
-program.print("Program: ");
-// CONSOLE_BRIDGE_logInform("basic cartesian plan example");
-}
-
-int main(int argc, char** argv)
+int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
-  // Create node
-  auto node = std::make_shared<rclcpp::Node>("planning_client");
-  publisher_ = node->create_publisher<trajectory_msgs::msg::JointTrajectory>("joint_trajectory_topic", 10);
-  // Create action client
-  auto action_client = rclcpp_action::create_client<tesseract_msgs::action::GetMotionPlan>(node, "tesseract_get_motion_plan");
-  // WAIT for action server
-  if (!action_client->wait_for_action_server(std::chrono::seconds(10))) 
-  {
-    RCLCPP_ERROR(node->get_logger(), "Action server not available after waiting");
-    rclcpp::shutdown();
-    return 1;
-  }
-  auto goal_msg = tesseract_msgs::action::GetMotionPlan::Goal();
-  goal_msg.request.name = "TrajOptPipeline";
-
-  // tesseract_planning::CompositeInstruction  program;
-  
-  // create_programe(program);
-  // std::cout << "Type de program: " << typeid(program).name() << std::endl;
-
-  // to anypoly
-  // tesseract_common::AnyPoly any_composite_instruction(program);
-
-  CompositeInstruction program2 = rasterExampleProgram();
-  // tesseract_planning::InstructionPoly any_composite_instruction(program);
-  // std::cout << "Type de any_composite_instruction: " << typeid(any_composite_instruction).name() << std::endl;
-  //serialize
-  std::string any_composite_instruction_string = 
-  tesseract_common::Serialization::toArchiveStringXML<tesseract_common::AnyPoly>(program2); 
-
-  //   result->response.results = Serialization::toArchiveStringXML<tesseract_planning::InstructionPoly>(
-  //       results.as<tesseract_planning::CompositeInstruction>());
-
-  // bool test= tesseract_planning::Serialization::toArchiveStringXML(any_composite_instruction,
-  //                              "test_tesseract_serialisation.xml",
-  //                              "any_composite_instruction");
-  // Afficher la chaîne sérialisée
-  // std::cout << any_composite_instruction_string << std::endl;
-    
-  // result->response.results = Serialization::toArchiveStringXML<tesseract_planning::InstructionPoly>(
-  //   results.as<tesseract_planning::CompositeInstruction>());
-
-
-  goal_msg.request.input= any_composite_instruction_string;
-
-  // Remplir le goal_msg ici avec les informations nécessaires
-
-  RCLCPP_INFO(node->get_logger(), "Sending goal");
-
-  auto send_goal_options = rclcpp_action::Client<tesseract_msgs::action::GetMotionPlan>::SendGoalOptions();
-  send_goal_options.goal_response_callback = goal_response_callback;
-  send_goal_options.feedback_callback = feedback_callback;
-  send_goal_options.result_callback = result_callback;
-
-  action_client->async_send_goal(goal_msg, send_goal_options);
-
-  RCLCPP_INFO(node->get_logger(), "Planning Client Running!");
-  rclcpp::spin(node);
+  auto action_client = std::make_shared<ActionClient>();
+  rclcpp::spin(action_client);
   rclcpp::shutdown();
   return 0;
 }
-  
-//   // Create Process Planning Request
-//   tesseract_msgs::msg::PlanningRequest request;
-  
-//   // request.environment_state =
-//   // request.commands =
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
-//   request.name = "TaskflowExecutor"; //c'est pas ca mais le serveur me dire les availables
-    
-  
-//   // request.executor  if empty default one is used.
-//   // request.input
-//   // request.dotgraph = false;
-//   // request.debug = true;
-//   // request.save_io = false;
-//   // request.move_profile_remapping
-//   // request.composite_profile_remapping 
-  
-//   // request.instructions = Instruction(program);  // EXISTE PLUS
-//   // Print Diagnostics
-//   // request.instructions.print("Program: "); // EXISTE PLUS
-//   // Instruction program = rasterExampleProgram();
-
-//   RCLCPP_INFO(node->get_logger(), "Planning Client Running!");
-//   rclcpp::spin(node);
-//   rclcpp::shutdown();
-//   return 0;
-// }
 
 
 
