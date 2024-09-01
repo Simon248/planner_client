@@ -28,6 +28,9 @@ find_package(tesseract_rosutils REQUIRED)
 
 
 find_package(planning_server REQUIRED)
+
+find_package(moveit_msgs REQUIRED) #for display trajectories
+
 # Load variable for clang tidy args, compiler options and cxx version
 tesseract_variables()
 
@@ -69,6 +72,9 @@ target_link_libraries(${PROJECT_NAME}_node
     ${planning_server_TARGETS}
     tesseract_monitoring::tesseract_monitoring_environment
     tesseract_rosutils::tesseract_rosutils
+
+    ${moveit_msgs_TARGETS}
+
   PRIVATE
     ${tf2_eigen_TARGETS}
 )
